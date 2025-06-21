@@ -3,28 +3,22 @@
 from datetime import datetime, time, timedelta
 import pytz
 
-# Визначення часових поясів для міст
 CITIES_TIMEZONES = {
     "Нью-Йорк": "America/New_York",
     "Лондон": "Europe/London",
     "Токіо": "Asia/Tokyo"
 }
 
-# Визначення часу відкриття та закриття бірж у кожному місті
 EXCHANGE_HOURS = {
     "Нью-Йорк": {"open": time(9, 30), "close": time(16, 0)},
     "Лондон": {"open": time(8, 0), "close": time(16, 30)},
     "Токіо": {"open": time(9, 0), "close": time(15, 0)}
 }
 
-REFERENCE_CITY = "Лондон"  # Вибір референтного міста для розрахунку часу до відкриття
+# Ця змінна використовується функціями всередині цього файлу
+REFERENCE_CITY = "Лондон" 
 
 def get_current_time(city: str) -> str:
-    """
-    Отримує поточний час у заданому місті.
-    :param city: Назва міста
-    :return: Форматований час як рядок
-    """
     try:
         timezone = pytz.timezone(CITIES_TIMEZONES[city])
         city_time = datetime.now(timezone)
@@ -34,51 +28,45 @@ def get_current_time(city: str) -> str:
         return "Немає даних"
 
 def is_exchange_active(city: str) -> bool:
-    """
-    Визначає, чи біржа у заданому місті зараз відкрита (active) або закрита (passive).
-    :param city: Назва міста
-    :return: True, якщо біржа відкрита, інакше False
-    """
     try:
         timezone = pytz.timezone(CITIES_TIMEZONES[city])
-        now = datetime.now(timezone).time()
+        now = datetime.now(timezone)
+        
+        if now.weekday() in [5, 6]:
+            return False
+
         open_time = EXCHANGE_HOURS[city]["open"]
         close_time = EXCHANGE_HOURS[city]["close"]
-        return open_time <= now <= close_time
+        return open_time <= now.time() <= close_time
     except Exception as e:
         print(f"Помилка при визначенні статусу біржі для {city}: {e}")
         return False
 
+# Зверніть увагу: reference_city має значення за замовчуванням
 def get_time_until_open(city: str, reference_city: str = REFERENCE_CITY) -> str:
-    """
-    Розраховує час до наступного відкриття біржі у заданому місті відносно референтного міста.
-    :param city: Назва міста, для якого розраховується час до відкриття
-    :param reference_city: Назва референтного міста (за замовчуванням Лондон)
-    :return: Форматований час до відкриття як рядок
-    """
     try:
         ref_timezone = pytz.timezone(CITIES_TIMEZONES[reference_city])
         ref_time = datetime.now(ref_timezone)
 
         target_timezone = pytz.timezone(CITIES_TIMEZONES[city])
         target_now = datetime.now(target_timezone)
+        
+        open_time = EXCHANGE_HOURS[city]["open"]
+        next_open_date = target_now.date()
 
-        # Встановлюємо час відкриття на сьогодні
-        target_open_today = target_timezone.localize(datetime.combine(target_now.date(), EXCHANGE_HOURS[city]["open"]))
+        if target_now.weekday() == 4 and target_now.time() >= EXCHANGE_HOURS[city]["close"]:
+            next_open_date += timedelta(days=3)
+        elif target_now.weekday() == 5:
+            next_open_date += timedelta(days=2)
+        elif target_now.weekday() == 6:
+            next_open_date += timedelta(days=1)
+        elif target_now.time() >= EXCHANGE_HOURS[city]["close"]:
+             next_open_date += timedelta(days=1)
 
-        if target_now >= target_open_today:
-            # Якщо вже після відкриття, наступне відкриття завтра
-            target_open = target_open_today + timedelta(days=1)
-        else:
-            target_open = target_open_today
+        target_open = target_timezone.localize(datetime.combine(next_open_date, open_time))
 
-        # Переводимо час відкриття у референтний часовий пояс
         target_open_ref = target_open.astimezone(ref_timezone)
-
         delta = target_open_ref - ref_time
-
-        if delta.total_seconds() < 0:
-            delta += timedelta(days=1)
 
         hours, remainder = divmod(int(delta.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
