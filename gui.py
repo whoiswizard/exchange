@@ -163,7 +163,7 @@ class CalculatorGUI(QWidget):
         # Таймер для оновлення цін (5 секунд)
         self.price_timer = QTimer()
         self.price_timer.timeout.connect(self.update_prices)
-        self.price_timer.start(5000)  # 5000 мс = 5 секунд
+        self.price_timer.start(30000)  # 5000 мс = 5 секунд
         self.update_prices()  # Початкове оновлення
 
         # Таймер для оновлення часу (1 секунда)
