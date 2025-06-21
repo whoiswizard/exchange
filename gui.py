@@ -90,6 +90,16 @@ class CalculatorGUI(QWidget):
         price_group = QGroupBox("Трекінг Цін")
         price_layout = QVBoxLayout()
 
+        # --- ЗМІНА ПОЧАТОК: Додаємо кнопку оновлення ---
+        # Горизонтальний макет для кнопки, щоб розмістити її праворуч
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.addStretch() # Додаємо розтягувач, щоб кнопка була справа
+        self.refresh_button = QPushButton("Оновити ціни")
+        self.refresh_button.clicked.connect(self.update_prices)
+        top_bar_layout.addWidget(self.refresh_button)
+        price_layout.addLayout(top_bar_layout) # Додаємо цей макет зверху
+        # --- ЗМІНА КІНЕЦЬ ---
+
         # Використовуємо ScrollArea для можливого додавання більше монет
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -127,7 +137,9 @@ class CalculatorGUI(QWidget):
         self.add_coin_button.clicked.connect(self.add_coin)
         add_coin_layout.addWidget(self.new_coin_input)
         add_coin_layout.addWidget(self.add_coin_button)
+        # Додаємо поле вводу нової монети до price_layout, а не price_group
         price_layout.addLayout(add_coin_layout)
+
 
         # Час у містах та відкриття бірж
         time_group = QGroupBox("Час та Відкриття Бірж")
@@ -157,20 +169,22 @@ class CalculatorGUI(QWidget):
         main_layout.addWidget(time_group)
 
         self.setLayout(main_layout)
-        self.resize(480, 800)  # Збільшено розмір вікна для додаткових даних
+        self.resize(480, 800)
 
     def init_timers(self):
-        # Таймер для оновлення цін (5 секунд)
-        self.price_timer = QTimer()
-        self.price_timer.timeout.connect(self.update_prices)
-        self.price_timer.start(5000)  # 5000 мс = 5 секунд
-        self.update_prices()  # Початкове оновлення
+        # --- ЗМІНА ПОЧАТОК: Видаляємо таймер оновлення цін ---
+        # Таймер для оновлення цін більше не потрібен, оскільки є кнопка
+        # self.price_timer = QTimer()
+        # self.price_timer.timeout.connect(self.update_prices)
+        # self.price_timer.start(30000) # оновлюємо дані з апі бінансу раз в 30 секунд
+        self.update_prices() # Залишаємо початкове оновлення, щоб дані завантажились при старті
+        # --- ЗМІНА КІНЕЦЬ ---
 
         # Таймер для оновлення часу (1 секунда)
         self.time_timer = QTimer()
         self.time_timer.timeout.connect(self.update_times)
-        self.time_timer.start(1000)  # 1000 мс = 1 секунда
-        self.update_times()  # Початкове оновлення
+        self.time_timer.start(1000) # 1000 мс = 1 секунда
+        self.update_times() # Початкове оновлення
 
     def format_volume(self, volume_usd):
         """
@@ -205,7 +219,7 @@ class CalculatorGUI(QWidget):
                 volume_usd = price * volume
                 change_usd = self.format_change_usd(price_change_percent, price)
                 formatted_volume = self.format_volume(volume_usd)
-                name = symbol[:-4]  # Видаляємо 'USDT'
+                name = symbol[:-4] # Видаляємо 'USDT'
                 # Форматування з комами для кращої читабельності
                 label.setText(
                     f"{name}: ${price:,.2f} | Change: {price_change_percent:.2f}% | Change: ${change_usd} | Volume: {formatted_volume}"
@@ -284,7 +298,7 @@ class CalculatorGUI(QWidget):
             QMessageBox.information(self, "Інформація", f"Монета {symbol} вже відстежується.")
             return
 
-        name = symbol[:-4]  # Видаляємо 'USDT'
+        name = symbol[:-4] # Видаляємо 'USDT'
         label = QLabel(f"{name}: Завантаження... | Change: Завантаження...% | Change: Завантаження... USD | Volume: Завантаження... B USD")
         label.setStyleSheet("font-size: 12px;")
         self.scroll_layout.addWidget(label)
